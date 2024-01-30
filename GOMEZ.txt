@@ -1,0 +1,530 @@
+Attribute VB_Name = "Module1"
+Sub ClickHereToStageThisAction()
+
+    Dim myCSVFileName As String
+    Dim myWB As Workbook
+    Dim tempWB As Workbook
+    Dim rngToSave As Range
+
+    Application.DisplayAlerts = False
+    On Error GoTo err
+        
+'   Check to make sure you have a Settle Date
+    If Range("ERROR") = "ERROR" Then
+    MsgBox "Looks Like You Forgot Settle Date"
+    Exit Sub
+    
+    End If
+    
+'   Check to make sure you have no Errors in these named ranges: PartialPayDown,OffSettingAccountingEntry,CusipToPrivateCashActivity,PrivateToCusipCashActivity
+    If Range("ErrorCheck") = "ERROR" Then
+    MsgBox "Looks Like there is a #N/A Error that needs to be fixed in Payment Notice / OffSetting Accounting Entry / CUSIP Cash Activity / PRIVATE Cash Activity sections. Please fix the error and try again."
+    Exit Sub
+    
+    End If
+
+'   Check to make sure you have a Fee Type if there is a Fee Paid/Received
+    If Range("ErrorFee") = "ERROR" Then
+    MsgBox "Looks Like You Forgot Fee Type"
+    Exit Sub
+    
+    End If
+
+'   Check to make sure you selected a Landing Account (not required)
+    If Range("LandingAcct") = "" Then
+    mbResult = MsgBox("Looks like you didn't select a Landing Account. Select YES to continue. Select NO to go back and select a Landing Account.", _
+    vbYesNo)
+    
+    Select Case mbResult
+    
+        Case vbYes
+        
+        Case vbNo
+            Exit Sub
+            
+    End Select
+    End If
+    
+    '   *Copy named range that contains one corporate action from 'Corp Action Workflow'
+    Set rngToSave = Range("PartialPayDown")
+    rngToSave.Copy
+    
+'   *Paste Corp Action details from 'Corp Action Workflow' worksheet to an aggregated list in 'Corp Action Staging' worksheeet
+    Sheet6.Select
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+    For Each cell In Range("PasteHerePaymentNotice")
+    If (cell) <> ("") = False Then cell.Select: Exit For
+    Next cell
+'    Range("PasteHerePaymentNotice").Select
+    Selection.PasteSpecial xlPasteValues
+    
+    '   *Copy named range that contains one Accountig Offset action from 'Corp Action Workflow'
+    Set rngToSave = Range("OffSettingAccountingEntry")
+    rngToSave.Copy
+    
+'   *Paste Cusip to Private action from 'Corp Action Workflow' worksheet to an aggregated list in 'Corp Action Staging' worksheeet
+    Sheet6.Select
+'    Dim ws As Worksheet
+    Set ws = ActiveSheet
+    For Each cell In Range("PasteHereOffSetEntry")
+    If (cell) <> ("") = False Then cell.Select: Exit For
+    Next cell
+    
+'    Range("PasteHereOffSetEntry").Select
+    Selection.PasteSpecial xlPasteValues
+    
+    
+    '   *Copy named range that contains one Cusip to Private action from 'Corp Action Workflow'
+    Set rngToSave = Range("CusipToPrivateCashActivity")
+    rngToSave.Copy
+    
+'   *Paste Cusip to Private action from 'Corp Action Workflow' worksheet to an aggregated list in 'Corp Action Staging' worksheeet
+    Sheet6.Select
+'    Dim ws As Worksheet
+    Set ws = ActiveSheet
+    For Each cell In Range("PasteHereCusipToPrivate")
+    If (cell) <> ("") = False Then cell.Select: Exit For
+    Next cell
+    
+'    Range("PasteHereCusipToPrivate").Select
+    Selection.PasteSpecial xlPasteValues
+    
+    '   *Copy named range that contains one Private to Cusip action from 'Corp Action Workflow'
+    Set rngToSave = Range("PrivateToCusipCashActivity")
+    rngToSave.Copy
+    
+'   *Paste Private to Cusip action from 'Corp Action Workflow' worksheet to an aggregated list in 'Corp Action Staging' worksheeet
+    Sheet6.Select
+'    Dim ws As Worksheet
+    Set ws = ActiveSheet
+    For Each cell In Range("PasteHerePrivateToCusip")
+    If (cell) <> ("") = False Then cell.Select: Exit For
+    Next cell
+    
+'    Range("PasteHerePrivateToCusip").Select
+    Selection.PasteSpecial xlPasteValues
+       
+'   *Clearing out cells that appear blank but actually are not blank.
+    Range("General1").Select    'The range you want to remove blanks
+    With Selection
+    Selection.NumberFormat = "General"
+    .Value = .Value
+    End With
+    
+    Range("General2").Select    'The range you want to remove blanks
+    With Selection
+    Selection.NumberFormat = "General"
+    .Value = .Value
+    End With
+    
+    Range("General3").Select    'The range you want to remove blanks
+    With Selection
+    Selection.NumberFormat = "General"
+    .Value = .Value
+    End With
+    
+    Range("General4").Select    'The range you want to remove blanks
+    With Selection
+    Selection.NumberFormat = "General"
+    .Value = .Value
+    End With
+    
+    
+    ActiveSheet.Range("A1").Select
+    
+    Sheet4.Select
+    ActiveSheet.Range("A1").Select
+    
+err:
+    Application.DisplayAlerts = True
+    
+
+    
+End Sub
+
+Sub SendToAccounting()
+
+    Dim myCSVFileName As String
+    Dim myWB As Workbook
+    Dim tempWB As Workbook
+    Dim rngToSave As Range
+
+    Application.DisplayAlerts = False
+    On Error GoTo err
+    
+    Call PrintNoticeToPDF
+    Call CopyPasteTransactionID
+'---------------------------------------------
+    'Save as Comma Delimited Text (One)
+    Set myWB = ThisWorkbook
+    myCSVFileName = Range("FileName") & ".csv"
+
+    Range("Copy1").Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+
+
+    Set tempWB = Application.Workbooks.Add(1)
+    With tempWB
+        .Sheets(1).Range("A1").PasteSpecial xlPasteValues
+        .SaveAs Filename:="I:\Private Loan Pmt Allocations\All Files\" & myCSVFileName, FileFormat:=xlCSV, CreateBackup:=False
+        .Close
+
+    On Error Resume Next
+        
+'        ActiveWorkbook.Close
+    On Error GoTo 0
+
+    End With
+'---------------------------------------------
+     'Save as Comma Delimited Text (Two)
+     
+    'Declare variables
+    Dim Two As Range
+    Dim ThisSpot As Integer
+    
+    'Set Two to the desired range
+    Set Two = Range("Two")
+    
+    'Check if Two is NULL
+    If Two.Value = "" Then
+        'Set the value of ThisSpot to the desired point in the code
+        ThisSpot = 10
+        'Skip to ThisSpot
+        GoTo SkipToThisSpot2
+    End If
+    
+    'If Two is not NULL, continue with the code
+    'Code goes here...
+         
+     
+    Set myWB = ThisWorkbook
+    myCSVFileName = Range("OffSettingAccountingFileName") & ".csv"
+
+    Range("Copy2").Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+
+
+    Set tempWB = Application.Workbooks.Add(1)
+    With tempWB
+        .Sheets(1).Range("A1").PasteSpecial xlPasteValues
+        .SaveAs Filename:="I:\Private Loan Pmt Allocations\All Files\" & myCSVFileName, FileFormat:=xlCSV, CreateBackup:=False
+        .Close
+
+    On Error Resume Next
+        
+'        ActiveWorkbook.Close
+    On Error GoTo 0
+
+    End With
+    
+        'Jump to this point in the code if Two is NULL
+SkipToThisSpot2:
+    'Code to execute when skipping to ThisSpot goes here...
+'---------------------------------------------
+      'Save as Comma Delimited Text (Three)
+
+    'Declare variables
+    Dim Three As Range
+
+    
+    'Set Three to the desired range
+    Set Three = Range("Three")
+    
+    'Check if Three is NULL
+    If Three.Value = "" Then
+        'Set the value of ThisSpot to the desired point in the code
+        ThisSpot = 10
+        'Skip to ThisSpot
+        GoTo SkipToThisSpot3
+    End If
+    
+    'If Three is not NULL, continue with the code
+    'Code goes here...
+      
+      
+      
+    Set myWB = ThisWorkbook
+    myCSVFileName = Range("CusipToPrivateFileName") & ".csv"
+
+    Range("Copy3").Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+
+
+    Set tempWB = Application.Workbooks.Add(1)
+    With tempWB
+        .Sheets(1).Range("A1").PasteSpecial xlPasteValues
+        .SaveAs Filename:="I:\Private Loan Pmt Allocations\All Files\" & myCSVFileName, FileFormat:=xlCSV, CreateBackup:=False
+        .Close
+
+    On Error Resume Next
+        
+'        ActiveWorkbook.Close
+    On Error GoTo 0
+
+    End With
+    
+            'Jump to this point in the code if Two is NULL
+SkipToThisSpot3:
+    'Code to execute when skipping to ThisSpot goes here...
+    
+'---------------------------------------------
+     'Save as Comma Delimited Text (Four)
+     
+    'Declare variables
+    Dim Four As Range
+
+    
+    'Set Four to the desired range
+    Set Four = Range("Four")
+    
+    'Check if Four is NULL
+    If Four.Value = "" Then
+        'Set the value of ThisSpot to the desired point in the code
+        ThisSpot = 10
+        'Skip to ThisSpot
+        GoTo SkipToThisSpot4
+    End If
+    
+    'If Four is not NULL, continue with the code
+    'Code goes here...
+         
+     
+    Set myWB = ThisWorkbook
+    myCSVFileName = Range("PrivateToCusipFileName") & ".csv"
+
+    Range("Copy4").Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+
+
+    Set tempWB = Application.Workbooks.Add(1)
+    With tempWB
+        .Sheets(1).Range("A1").PasteSpecial xlPasteValues
+        .SaveAs Filename:="I:\Private Loan Pmt Allocations\All Files\" & myCSVFileName, FileFormat:=xlCSV, CreateBackup:=False
+        .Close
+
+    On Error Resume Next
+        
+'        ActiveWorkbook.Close
+    On Error GoTo 0
+
+    End With
+    
+        'Jump to this point in the code if Two is NULL
+SkipToThisSpot4:
+    'Code to execute when skipping to ThisSpot goes here...
+    
+'---------------------------------------------
+err:
+    Application.DisplayAlerts = True
+    
+    
+'   Append StageData to end of CorpActionHistory Tab
+    With myWB
+    
+'    Set rngToSave = Range("StageData")
+
+    Range("Filter").Select
+    ActiveSheet.Range("FilterAll").AutoFilter Field:=1, Criteria1:="FALSE"
+    
+    Set rngToSave = Range("RangePaymentNotice")
+    
+    rngToSave.Copy
+'    End With
+   
+'   *Paste StageData details to CorpActionHistory
+
+
+    Workbooks.Open Filename:= _
+        "I:\Private Loan Pmt Allocations\GRANDMAMA - PrivatePaymentHistory.xlsx"
+
+
+    ActiveSheet.Range("A1").Select
+    
+    Sheets("Sheet1").Select
+    Range("A1").Select
+    
+Call Unprotect
+ 
+    NextFree = Range("A2:A" & Rows.Count).Cells.SpecialCells(xlCellTypeBlanks).Row
+    Range("A" & NextFree).Select
+ 
+ 
+'    Dim ws As Worksheet
+'    Set ws = ActiveSheet
+'    For Each cell In ws.Columns(1).Cells
+'    If (cell) <> ("") = False Then cell.Select: Exit For
+'    Next cell
+      
+    rngToSave.Copy
+    End With
+      
+    Selection.PasteSpecial xlPasteValues
+'   *Clearing out cells that appear blank but actually are not blank.
+    Range("A2:C10000").Select    'The range you want to remove blanks
+    With Selection
+    Selection.NumberFormat = "General"
+    .Value = .Value
+    End With
+    
+
+    Call Protect
+       
+    ActiveWorkbook.Save
+    ActiveWorkbook.Close
+       
+       
+       
+       
+'   Clear StageData
+    Range("Filter").Select
+    ActiveSheet.Range("FilterAll").AutoFilter Field:=1
+Dim wb As Workbook
+
+For Each wb In Application.Workbooks
+   If wb.Name Like "Corp Action, Unscheduled Pmt*" Then wb.Activate
+Next wb
+
+    With myWB
+    Range("ClearStageData").Clear
+    End With
+    
+Call ClearStagedDate
+    
+'   Go back to CorpActionWorkflow page
+    Sheet4.Select
+    ActiveSheet.Range("A1").Select
+    
+  
+    
+End Sub
+
+
+Sub ClearDate()
+
+
+    ActiveSheet.Range("ActionDateData").ClearContents
+    ActiveSheet.Range("CashPmtData").ClearContents
+    ActiveSheet.Range("WiredAmount").ClearContents
+    ActiveSheet.Range("DealType").ClearContents
+    ActiveSheet.Range("Currency").ClearContents
+    ActiveSheet.Range("CurrencyTo").ClearContents
+    ActiveSheet.Range("FXRate").ClearContents
+    ActiveSheet.Range("CashAccounts").ClearContents
+    ActiveSheet.Range("CUSIP").ClearContents
+    ActiveSheet.Range("ExpenseTypeName").ClearContents
+    ActiveSheet.Range("MWID_Override").ClearContents
+    ActiveSheet.Range("USBID_Override").ClearContents
+    
+End Sub
+
+
+Sub ClearStagedDate()
+
+Dim wb As Workbook
+
+For Each wb In Application.Workbooks
+   If wb.Name Like "Corp Action, Unscheduled Pmt*" Then wb.Activate
+Next wb
+
+    With myWB
+    Range("ClearStageData").Clear
+        Range("ClearCusipToPrivateStage").Clear
+            Range("ClearPrivateToCusipStage").Clear
+                Range("ClearOffSetEntryStage").Clear
+
+            
+    End With
+
+    ActiveSheet.Range("D1").Select
+
+End Sub
+Sub PrintNoticeToPDF()
+
+Dim invoiceRng As Range
+Dim strfile As String
+
+If Range("DealType") = "Pvt Debt" Then
+
+'Setting range to be printed
+Set invoiceRng = Range("PDFNotice")
+'setting file name with a time stamp.
+strfile = Range("PDFSaveAsName") & "" & Format(Now(), " yyyymmdd_hhmmss") & ".pdf"
+'setting the fulli qualified name. The resultent pdf will be saved where the main file exists.
+
+'strfile = ThisWorkbook.Path & "\" & strfile
+strfile = "I:\Private Loan Pmt Allocations\AD Mortgage Notices" & "\" & strfile
+
+invoiceRng.ExportAsFixedFormat _
+        Type:=xlTypePDF, _
+        Filename:=strfile, _
+        Quality:=xlQualityStandard, _
+        IncludeDocProperties:=True, _
+        IgnorePrintAreas:=False, _
+        OpenAfterPublish:=False
+
+Else
+
+'Setting range to be printed
+Set invoiceRng = Range("PDFNotice")
+'setting file name with a time stamp.
+strfile = Range("PDFSaveAsName") & "" & Format(Now(), " yyyymmdd_hhmmss") & ".pdf"
+'setting the fulli qualified name. The resultent pdf will be saved where the main file exists.
+
+'strfile = ThisWorkbook.Path & "\" & strfile
+strfile = "I:\Private Loan Pmt Allocations\All Files\PDF Notices" & "\" & strfile
+
+invoiceRng.ExportAsFixedFormat _
+        Type:=xlTypePDF, _
+        Filename:=strfile, _
+        Quality:=xlQualityStandard, _
+        IncludeDocProperties:=True, _
+        IgnorePrintAreas:=False, _
+        OpenAfterPublish:=False
+        
+End If
+
+End Sub
+
+Sub Unprotect()
+'
+'Temporarily Unprotect GRANDMAMA
+'
+    ActiveSheet.Unprotect Password:="Derek595"
+'
+End Sub
+
+Sub Protect()
+'
+'Temporarily Unprotect GRANDMAMA
+'
+    ActiveSheet.Protect Password:="Derek595"
+'
+End Sub
+
+Sub CopyPasteTransactionID()
+'
+' CopyPasteTransactionID Macro
+
+    ActiveSheet.Range("$A$2:$AC$4006").AutoFilter Field:=24, Criteria1:= _
+        "<>TransactionID", Operator:=xlAnd, Criteria2:="<>"
+
+    Range("TransactionID").Select
+    Selection.Copy
+    Range("X3").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Application.CutCopyMode = False
+    Selection.FillDown
+    ActiveSheet.Range("$A$2:$AC$4006").AutoFilter Field:=24
+    Range("TransactionID").Select
+    
+End Sub
+
