@@ -1,0 +1,169 @@
+Attribute VB_Name = "Module1"
+Sub Stage_Pvt_GL_Activity()
+'
+' PvtActivityToGL Macro
+'
+    Dim wb As Worksheet
+    Set wb = ActiveSheet
+
+'   Check to make sure you have a Start Date
+    If Range("Start") = "ERROR" Then
+    MsgBox "Looks Like You Forgot Start Date"
+    Exit Sub
+    
+    End If
+
+'   Check to make sure you have an End Date
+    If Range("End") = "ERROR" Then
+    MsgBox "Looks Like You Forgot End Date"
+    Exit Sub
+    
+    End If
+'
+' First, Clear contents of previously run Pvt Activity To GL
+    Range("PasteActivityHere").Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.ClearContents
+    Range("PasteActivityHere ").Select
+'
+' Select the Date Range you want the report to include
+    Range("DateRange").Select
+    Selection.Copy
+    Application.Goto Reference:="DateRangeLast"
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Range("ActivityDateRange").Select
+    Selection.Copy
+'
+' Open the GRANDMAMA - PrivatePaymentHistory.xlsx spreadsheet
+    Workbooks.Open Filename:="I:\Private Loan Pmt Allocations\GRANDMAMA History\GRANDMAMA - PrivatePaymentHistory.xlsx"
+'    Workbooks.Open Filename:="I:\Private Loan Pmt Allocations\GRANDMAMA History\Backups\GRANDMAMA - PrivatePaymentHistory.xlsx"
+'
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+    
+    Application.Goto Reference:="ActivityDateRange"
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Application.Goto Reference:="DateGLFeed"
+'
+' Filter for 'Dates Between' to ActivityDateStart & ActivityDateEnd
+    Dim date1 As String
+    Dim date2 As String
+    
+    date1 = Range("ActivityDateStart")
+    date2 = Range("ActivityDateEnd")
+    
+    Application.Goto Reference:="FileDateGLFeed"
+    
+    ActiveSheet.Range("FileDateGLFeed").AutoFilter Field:=3, Criteria1:=">=" & date1, Operator:=xlAnd, Criteria2:="<=" & date2
+    
+' Filter for Amount <> Zero
+    ActiveSheet.Range("AmountGLFeed").AutoFilter Field:=7, Criteria1:="<>0", Operator:=xlFilterValues
+'
+' Select Ranges to copy
+    Range("Data").Select
+'
+    Application.CutCopyMode = False
+    Selection.Copy
+'
+' Go Back to Frankenstein Worksheet and Paste selected data in 'End of Day Paydowns and Draws' tab
+    wb.Activate
+'
+    Range("PasteActivityHere").Select
+'
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+'
+' Go Back to GRANDMAMA - PrivatePaymentHistory Worksheet, clear filters, close but do not save
+    Workbooks("GRANDMAMA - PrivatePaymentHistory.xlsx").Activate
+'
+'
+  If ActiveSheet.AutoFilterMode Then
+     ActiveSheet.AutoFilterMode = False
+  End If
+'
+    Cells.Select
+    Selection.AutoFilter
+'
+    ActiveWorkbook.Close savechanges:=False
+'
+'
+    Application.Goto Reference:="PvtGLActivityHeader"
+    Selection.AutoFilter
+    
+    Range("DateRange").Select
+    Selection.ClearContents
+    
+    Range("PasteActivityHere").Select
+    
+    Sheet1.Select
+
+'    End With
+'
+'
+End Sub
+
+Sub Save_Files()
+
+'   Copy named ranges from "GL Output from Frankie" & "Prep for Upload"
+
+    Dim myCSVFileName1 As String
+    Dim myCSVFileName2 As String
+    Dim myWB As Workbook
+    Dim tempWB1 As Workbook
+    Dim tempWB2 As Workbook
+
+'---------------------------------------------
+        'Save as XLSX (One)
+
+        Set myWB = ThisWorkbook
+        myCSVFileName1 = Range("FileName1") & ".xlsx"
+
+    Range("StartCopy1").Select
+        ActiveSheet.Range("$h$4:$W$500").AutoFilter Field:=1, Criteria1:="<>"
+    Range(Selection, Selection.End(xlToRight)).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+    
+    Set tempWB = Application.Workbooks.Add(1)
+    With tempWB
+            .Sheets(1).Range("A1").PasteSpecial Paste:=xlPasteValuesAndNumberFormats, _
+                 Operation:=xlNone, SkipBlanks:=False, Transpose:=False
+            .SaveAs Filename:="I:\Private Loan Activity to GL\Daily Files\" & myCSVFileName1, FileFormat:=51, CreateBackup:=False
+            .Close
+
+    Range("StartCopy1").Select
+        ActiveSheet.Range("$H$4:$AI$500").AutoFilter Field:=1
+        
+    End With
+
+'---------------------------------------------
+        'Save as XLSX (Two)
+        
+    Sheet2.Select
+
+    myCSVFileName2 = Range("FileName2") & ".xlsx"
+
+    Range("StartCopy2").Select
+        ActiveSheet.Range("$d$4:$AT$500").AutoFilter Field:=1, Criteria1:="<>"
+    Range(Selection, Selection.End(xlToRight)).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+    
+    Set tempWB = Application.Workbooks.Add(1)
+    With tempWB
+            .Sheets(1).Range("A1").PasteSpecial Paste:=xlPasteValuesAndNumberFormats, _
+                 Operation:=xlNone, SkipBlanks:=False, Transpose:=False
+            .SaveAs Filename:="I:\Private Loan Activity to GL\Daily Files\" & myCSVFileName2, FileFormat:=51, CreateBackup:=False
+            .Close
+
+
+    Range("StartCopy2").Select
+        ActiveSheet.Range("$d$4:$AI$500").AutoFilter Field:=1
+
+    End With
+
+End Sub
+
