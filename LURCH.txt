@@ -1,0 +1,121 @@
+Attribute VB_Name = "Module3"
+Sub CashPipeline()
+Attribute CashPipeline.VB_ProcData.VB_Invoke_Func = " \n14"
+'
+' CashPipeline Macro
+'
+    Dim wb As Worksheet
+    Set wb = ActiveSheet
+'
+' First, Clear contents of previously run Cash Pipeline
+    Range("PasteCashHere").Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.ClearContents
+    Range("PasteCashHere").Select
+'
+' Select the Date you want the report to start FROM
+    Range("CashDate").Select
+    Selection.Copy
+'
+' Open the GRANDMAMA - PrivatePaymentHistory.xlsx spreadsheet
+    Workbooks.Open Filename:= _
+        "I:\Private Loan Pmt Allocations\GRANDMAMA - PrivatePaymentHistory.xlsx"
+'
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+    
+
+    
+    Application.Goto Reference:="CashDate"
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Application.Goto Reference:="TopLeft"
+
+Call Unprotect
+
+'Make sure Column AC (Funding or Paydown?) has formulas / no blanks or hard coded data
+    Range("AC2").Select
+    Selection.Copy
+    Range("AC2:AC9999").Select
+    ActiveSheet.Paste
+'
+' Clear out cells that appaer blank but are not blank
+    Range("A2:C10000").Select  'The range you want to remove blanks
+    With Selection
+    Selection.NumberFormat = "General"
+    .Value = .Value
+    End With
+'
+' Filter for 'Greater Than Or Equal' to CashDate
+Dim date1 As Long
+date1 = Range("CashDate")
+    ActiveSheet.Range("SettleDate").AutoFilter Field:=2, Criteria1:= _
+        ">=" & date1, Operator:=xlAnd
+'
+' Filter for Funding or Paydown = Y
+    ActiveSheet.Range("FundingOrPaydown").AutoFilter Field:=29, Criteria1:="Y"
+'
+' Select Ranges to copy
+    Range("SettleDate,Identifier,Description,Account,CustodyAccount2,AddtlDraw,PrincipalPmt,TotalCash,FundingOrPaydown").Select
+'
+    Application.CutCopyMode = False
+    Selection.Copy
+'
+' Go Back to Frankenstein Worksheet and Paste selected data in 'End of Day Paydowns and Draws' tab
+    wb.Activate
+'
+    Range("PasteCashHere").Select
+'
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+'
+' Go Back to GRANDMAMA - PrivatePaymentHistory Worksheet, clear filters, close but do not save
+    Workbooks("GRANDMAMA - PrivatePaymentHistory.xlsx").Activate
+'
+'
+  If ActiveSheet.AutoFilterMode Then
+     ActiveSheet.AutoFilterMode = False
+  End If
+'
+    Cells.Select
+    Selection.AutoFilter
+'
+Call Protect
+
+    ActiveWorkbook.Close savechanges:=True
+'
+'
+    Application.Goto Reference:="CashPipelineHeader"
+    Selection.AutoFilter
+    Range("PasteCashHere").Select
+    ActiveWorkbook.Worksheets("End of Day Paydowns and Draws").AutoFilter.Sort. _
+        SortFields.Clear
+    ActiveWorkbook.Worksheets("End of Day Paydowns and Draws").AutoFilter.Sort. _
+        SortFields.Add2 Key:=Range("PasteCashHere"), SortOn:=xlSortOnValues, Order:= _
+        xlAscending, DataOption:=xlSortNormal
+    With ActiveWorkbook.Worksheets("End of Day Paydowns and Draws").AutoFilter.Sort
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+'
+'
+End Sub
+Sub Unprotect()
+'
+'Temporarily Unprotect GRANDMAMA
+'
+    ActiveSheet.Unprotect Password:="Derek595"
+'
+End Sub
+
+Sub Protect()
+'
+'Temporarily Unprotect GRANDMAMA
+'
+    ActiveSheet.Protect Password:="Derek595"
+'
+End Sub
